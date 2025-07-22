@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - game-data:/data
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  redis:
+    image: "redis:alpine"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
+    driver: local
+  game-data:
+    driver: local

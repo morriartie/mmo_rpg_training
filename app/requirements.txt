@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+redis
+sqlite3
+python-dotenv
+black
+flake8
