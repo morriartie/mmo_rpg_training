@@ -1,7 +1,5 @@
 fastapi
 uvicorn[standard]
-redis
-sqlite3
+redis>=4.3.4  # Modern redis-py that supports async
+db-sqlite3
 python-dotenv
-black
-flake8

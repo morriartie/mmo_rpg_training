@@ -2,6 +2,7 @@
 
 .PHONY: run build test clean migrate populate populate-docker
 
+
 # Variables
 DOCKER_COMPOSE = docker-compose
 APP_SERVICE = api
@@ -50,7 +51,7 @@ populate:
 
 # Populate database in Docker
 populate-docker:
-	$(DOCKER_COMPOSE) run $(APP_SERVICE) python populate_db.py
+	$(DOCKER_COMPOSE) run api python populate_db.py
 
 # Run with populate
 run-populated: build populate-docker

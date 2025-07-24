@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import sqlite3
-from database import get_sqlite_connection, redis_conn
+from redis.asyncio import Redis
+import asyncio
+from database import get_sqlite_connection, init_databases
 
-def create_sample_data():
+async def create_sample_data():
     conn = get_sqlite_connection()
     cursor = conn.cursor()
     
@@ -33,14 +35,14 @@ def create_sample_data():
     
     # Create sample NPCs
     npcs = [
-        (1000, "Goblin", 500.0, 500.0, 50, 50),
-        (1001, "Dragon", 600.0, 600.0, 500, 500),
-        (1002, "Merchant", 700.0, 700.0, 100, 100)
+        (1000, "npc", "Goblin", 500.0, 500.0, 50, 50),
+        (1001, "npc", "Dragon", 600.0, 600.0, 500, 500),
+        (1002, "npc", "Merchant", 700.0, 700.0, 100, 100)
     ]
     cursor.executemany(
         """INSERT OR IGNORE INTO characters 
         (charid, userid, name, x, y, health, max_health) 
-        VALUES (?, 'npc', ?, ?, ?, ?, ?)""",
+        VALUES (?, ?, ?, ?, ?, ?, ?)""",
         npcs
     )
     
@@ -68,7 +70,9 @@ def create_sample_data():
     conn.close()
     print("Created sample data in SQLite")
 
-def load_data_to_redis():
+async def load_data_to_redis():
+    redis = Redis.from_url("redis://redis", decode_responses=True)
+    
     # Load characters to Redis
     conn = get_sqlite_connection()
     cursor = conn.cursor()
@@ -77,55 +81,58 @@ def load_data_to_redis():
     cursor.execute("SELECT charid, x, y, health, max_health FROM characters WHERE userid != 'npc'")
     for char in cursor.fetchall():
         char_key = f"char:{char[0]}"
-        redis_conn.hmset(char_key, {
+        await redis.hset(char_key, mapping={
             "x": char[1],
             "y": char[2],
             "health": char[3],
             "max_health": char[4],
             "state": "online"
         })
-        redis_conn.sadd("online_chars", char[0])
+        await redis.sadd("online_chars", char[0])
     
     # NPCs
     cursor.execute("SELECT charid, x, y, health, max_health FROM characters WHERE userid = 'npc'")
     for npc in cursor.fetchall():
         npc_key = f"npc:{npc[0]}"
-        redis_conn.hmset(npc_key, {
+        await redis.hset(npc_key, mapping={
             "x": npc[1],
             "y": npc[2],
             "health": npc[3],
             "max_health": npc[4],
             "state": "idle"
         })
-        redis_conn.sadd("npcs", npc[0])
+        await redis.sadd("npcs", npc[0])
     
     # Game objects
     cursor.execute("SELECT object_id, name, x, y, type FROM game_objects")
     for obj in cursor.fetchall():
         obj_key = f"object:{obj[0]}"
-        redis_conn.hmset(obj_key, {
+        await redis.hset(obj_key, mapping={
             "name": obj[1],
             "x": obj[2],
             "y": obj[3],
             "type": obj[4],
             "state": "active"
         })
-        redis_conn.sadd("world_objects", obj[0])
+        await redis.sadd("world_objects", obj[0])
     
     # Set world as instanced
-    redis_conn.set("world:instanced", "true")
-    redis_conn.set("npcs:instanced", "true")
-    redis_conn.set("objects:instanced", "true")
+    await redis.set("world:instanced", "true")
+    await redis.set("npcs:instanced", "true")
+    await redis.set("objects:instanced", "true")
     
     conn.close()
+    await redis.close()
     print("Loaded data to Redis")
 
-if __name__ == "__main__":
+async def main():
     # Initialize database structure
-    from database import init_databases
     init_databases()
     
     # Create sample data
-    create_sample_data()
-    load_data_to_redis()
+    await create_sample_data()
+    await load_data_to_redis()
     print("Database population complete!")
+
+if __name__ == "__main__":
+    asyncio.run(main())
