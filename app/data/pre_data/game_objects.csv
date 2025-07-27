@@ -1,0 +1,4 @@
+object_id,name,x,y,type,instance
+2001,Ancient Oak,400.0,400.0,tree,1
+2002,Granite Boulder,450.0,450.0,rock,1
+2003,Treasure Chest,800.0,800.0,container,1

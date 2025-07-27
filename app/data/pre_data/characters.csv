@@ -1,0 +1,5 @@
+charid,userid,name,x,y,health,max_health,instance
+1,player1,Arthas,100.0,200.0,100,100,1
+2,player2,Jaina,150.0,250.0,80,80,1
+1000,npc,Goblin Merchant,500.0,500.0,50,50,1
+1001,npc,Guard,600.0,600.0,200,200,1

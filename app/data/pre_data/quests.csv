@@ -1,0 +1,3 @@
+quest_id,title,giver_npc_id,min_level,reward_exp
+1,Goblin Problems,1000,5,100
+2,Guard Duty,1001,10,250
