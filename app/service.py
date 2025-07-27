@@ -4,9 +4,65 @@ import time
 import asyncio
 from typing import Optional
 
+async def get_info(charid: int, characters: List[int], npcs: List[int], items: List[int]):
+    elements = {"characters": {}, "npcs": {}, "items": {}}
+    redis = await get_redis()
+    char_key = f"char:{charid}"
+
+    player_instance = await redis.hget(char_key, "instance")
+    if not player_instance:
+        return {"status": False, "message": "Character does not exist or has no instance"}
+
+    # {"char:0000": ("characters",0000)}
+    entity_map = {f"char:{id}": ("characters", id) for id in characters}
+    entity_map.update({f"npc:{id}": ("npcs", id) for id in npcs})
+    entity_map.update({f"object:{id}": ("items", id) for id in items})
+    
+    all_keys = list(entity_map.keys())
+    
+    pipeline = redis.pipeline()
+    for key in all_keys:
+        pipeline.hget(key, "instance")
+    instances = await pipeline.execute()
+    
+    valid_keys = []
+    for key, instance_val in zip(all_keys, instances):
+        if instance_val and instance_val.decode() == player_instance.decode():
+            valid_keys.append(key)
+    
+    if not valid_keys:
+        return {"status": True, "elements": elements}
+    
+    pipeline = redis.pipeline()
+    for key in valid_keys:
+        pipeline.hgetall(key)
+    results = await pipeline.execute()
+    
+    for key, data in zip(valid_keys, results):
+        category, entity_id = entity_map[key]
+        elements[category][entity_id] = {k.decode(): v.decode() for k, v in data.items()}
+    
+    return {"status": True, "elements": elements}
+
+async def char_has_vision(char_key, target_key): # inneficient, not for batch usage
+    if not redis.exists(char_key) or not redis.exists(target_key):
+        return False
+
+    char_data = await redis.hgetall(char_key)
+    target_data = await redis.hgetall(target_key)
+
+    char_instance = char_data.get("instance", False)
+    if not char_instance:
+        return False
+    target_instance = target_data.get("instance", False)
+    if target_instance == char_instance:
+        return True
+    return False
+
 # Runtime Tools
 async def move_direction(charid: int, dx: float, dy: float) -> bool:
     char_key = f"char:{charid}"
+    redis = await get_redis()
     if not await redis.exists(char_key):
         return False
     
@@ -34,6 +90,7 @@ async def move_direction(charid: int, dx: float, dy: float) -> bool:
     return False
 
 async def attack_direction(charid: int, target_id: int) -> bool:
+    redis = await get_redis()
     char_key = f"char:{charid}"
     target_key = f"char:{target_id}"  # Could be player or NPC
     

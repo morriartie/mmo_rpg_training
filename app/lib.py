@@ -30,6 +30,7 @@ async def create_character(userid: str, charname: str) -> Optional[int]:
     finally:
         conn.close()
 
+        
 # Instancing Tools
 async def log_in(charid: int) -> bool:
     conn = get_sqlite_connection()

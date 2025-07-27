@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse  # <-- Add this import
+from fastapi.responses import StreamingResponse
 import asyncio
 from lib import *
 from service import *
@@ -78,6 +78,11 @@ async def interact_object_endpoint(charid: int, object_id: int):
     if await interact_direction(charid, object_id):
         return {"message": "Interaction initiated"}
     raise HTTPException(status_code=404, detail="Character or object not found")
+
+@app.post("/get_info/{charid}/")
+async def get_info_endpoint(charid: int, players: List[int], monsters: List[int], npcs: List[int], items: List[int]):
+    r = await get_info(charid, players, monsters, npcs, items):
+    return r
 
 # Real-time Events
 @app.get("/events")
